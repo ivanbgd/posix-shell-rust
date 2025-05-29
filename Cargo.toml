@@ -1,0 +1,9 @@
+[package]
+name = "posix-shell"
+version = "0.1.0"
+authors = ["Ivan Lazarević"]
+description = "A POSIX-Compliant Shell (CLI) Implementation in Rust"
+license = "MIT"
+edition = "2024"
+
+[dependencies]
