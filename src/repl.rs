@@ -13,9 +13,11 @@ pub fn repl() {
         // Wait for user input
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("Read line failed");
-        if input.trim().is_empty() {
-            break;
+
+        match input.trim() {
+            "" => break,
+            "exit 0" => break,
+            invalid => println!("{}: command not found", invalid.trim()),
         }
-        println!("{}: command not found", input.trim());
     }
 }
