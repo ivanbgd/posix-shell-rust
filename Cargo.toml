@@ -7,5 +7,3 @@ license = "MIT"
 edition = "2024"
 
 [dependencies]
-anyhow = "1"
-thiserror = "2"

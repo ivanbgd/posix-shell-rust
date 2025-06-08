@@ -6,7 +6,6 @@
 
 use crate::cmd::{handle_echo, handle_exit};
 use std::io::{self, Write};
-// use std::process::exit;
 
 /// The main shell loop.
 pub fn repl() {
@@ -26,15 +25,6 @@ pub fn repl() {
         }
 
         parse_and_handle_cmd(cmd);
-
-        // if cmd.starts_with("exit") {
-        //     // if let Ok(code) = handle_exit(cmd.split_once(" ").unwrap_or(("exit", "0")).1) {
-        //     if let Ok(code) = handle_exit(cmd) {
-        //         exit(code);
-        //     }
-        // } else {
-        //     println!("{}: command not found", cmd);
-        // }
     }
 }
 
