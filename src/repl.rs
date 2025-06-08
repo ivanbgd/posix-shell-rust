@@ -4,7 +4,7 @@
 //!
 //! [Wikipedia](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)
 
-use crate::cmd::{handle_echo, handle_exit, handle_type};
+use crate::cmd::{handle_echo, handle_exit, handle_type, run_program};
 use std::io::{self, Write};
 
 /// The main shell loop.
@@ -28,7 +28,7 @@ pub fn repl() {
     }
 }
 
-/// Parses command and calls the appropriate command handler
+/// Parses command and calls the appropriate command or program handler
 fn parse_and_handle_cmd(cmd: &str) {
     let (cmd, args) = match cmd.split_once(" ") {
         Some((cmd, args)) => (cmd, Some(args)),
@@ -39,6 +39,6 @@ fn parse_and_handle_cmd(cmd: &str) {
         "echo" => handle_echo(args),
         "exit" => handle_exit(args),
         "type" => handle_type(args),
-        invalid_cmd => println!("{}: command not found", invalid_cmd),
+        exec => run_program(exec, args),
     }
 }
