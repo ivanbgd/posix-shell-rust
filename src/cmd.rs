@@ -1,5 +1,7 @@
 //! Command handlers
 
+use crate::constants::COMMANDS;
+
 /// Handler for the `echo` command
 pub fn handle_echo(arg: Option<&str>) {
     if let Some(arg) = arg {
@@ -16,4 +18,15 @@ pub fn handle_exit(arg: Option<&str>) {
         },
         None => std::process::exit(0),
     }
+}
+
+/// Handler for the `type` command
+pub fn handle_type(arg: Option<&str>) {
+    if let Some(arg) = arg {
+        if COMMANDS.contains(&arg.as_bytes()) {
+            println!("{arg} is a shell builtin");
+        } else {
+            println!("{arg}: not found");
+        }
+    };
 }
