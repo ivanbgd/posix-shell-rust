@@ -2,9 +2,9 @@
 
 [![license](https://img.shields.io/badge/License-MIT-blue.svg?style=flat)](LICENSE)
 
-# Notes
+# Supported Commands
 
-- The CLI runs in a loop until an empty command is entered.
+- [exit [n]](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#exit) - cause the shell to exit
 
 # Running the Program
 
