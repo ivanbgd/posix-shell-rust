@@ -23,10 +23,17 @@ pub fn handle_exit(arg: Option<&str>) {
     }
 }
 
+/// Handler for the `pwd` command
+pub fn handle_pwd() {
+    match env::current_dir() {
+        Ok(pwd) => println!("{}", pwd.display()),
+        Err(err) => eprintln!("{err}"),
+    }
+}
+
 /// Handler for the `type` command
 ///
-/// Searches for executable files using
-/// the [PATH](https://en.wikipedia.org/wiki/PATH_(variable)) environment variable.
+/// Searches for executable files using the `PATH` environment variable.
 ///
 /// Some commands, such as `echo`, can exist as both builtin commands and executable files.
 /// In such cases, the type command identifies them as builtins.
@@ -51,8 +58,7 @@ pub fn handle_type(arg: Option<&str>) {
 
 /// Runs external programs with arguments
 ///
-/// External programs are located using
-/// the [PATH](https://en.wikipedia.org/wiki/PATH_(variable)) environment variable.
+/// External programs are located using the `PATH` environment variable.
 pub fn run_program(exec: &str, args: Option<&str>) {
     let args = args.unwrap_or_default();
     let args = args.split_ascii_whitespace();
