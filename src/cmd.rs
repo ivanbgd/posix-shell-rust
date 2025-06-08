@@ -8,6 +8,15 @@ use std::process::Command;
 /// Handler for the `cd` command
 pub fn handle_cd(arg: Option<&str>) {
     if let Some(arg) = arg {
+        let home = match env::var("HOME") {
+            Ok(val) => val,
+            Err(_) => {
+                eprintln!("HOME not found");
+                return;
+            }
+        };
+        let arg = if arg.eq("~") { home.as_str() } else { arg };
+
         if env::set_current_dir(arg).is_err() {
             println!("cd: {arg}: No such file or directory");
         }
