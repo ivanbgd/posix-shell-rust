@@ -35,9 +35,7 @@ fn parse_and_handle_cmd(cmd: &str) {
         None => (cmd, None),
     };
 
-    let cmd = cmd.to_ascii_lowercase();
-
-    match cmd.as_str() {
+    match cmd {
         "echo" => handle_echo(args),
         "exit" => handle_exit(args),
         cmd => println!("{}: command not found", cmd),

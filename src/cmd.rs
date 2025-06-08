@@ -1,7 +1,11 @@
 //! Command handlers
 
 /// Handler for the `echo` command
-pub fn handle_echo(arg: Option<&str>) {}
+pub fn handle_echo(arg: Option<&str>) {
+    if let Some(arg) = arg {
+        println!("{arg}");
+    };
+}
 
 /// Handler for the `exit` command
 pub fn handle_exit(arg: Option<&str>) {
