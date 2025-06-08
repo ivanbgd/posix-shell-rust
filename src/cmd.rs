@@ -1,6 +1,7 @@
 //! Command handlers
 
 use crate::constants::COMMANDS;
+use std::env;
 
 /// Handler for the `echo` command
 pub fn handle_echo(arg: Option<&str>) {
@@ -26,6 +27,23 @@ pub fn handle_type(arg: Option<&str>) {
         if COMMANDS.contains(&arg.as_bytes()) {
             println!("{arg} is a shell builtin");
         } else {
+            let key = "PATH";
+            let path = match env::var(key) {
+                Ok(val) => val,
+                Err(_) => {
+                    eprintln!("{key} not found");
+                    return;
+                }
+            };
+            let paths = env::split_paths(&path);
+
+            for path in paths {
+                if path.join(arg).exists() {
+                    println!("{arg} is {}", path.join(arg).display());
+                    return;
+                }
+            }
+
             println!("{arg}: not found");
         }
     };
