@@ -48,6 +48,7 @@ fn parse_input_and_handle_cmd(input: &str) {
     let mut idx = 0usize;
 
     for ch in input.chars() {
+        // eprintln!("{ch} {:?} {idx} {item}", &stack[..16]);
         if ch.is_ascii_whitespace() {
             // Quoted text should keep all its whitespace characters, but unquoted text should not.
             // It should reduce several consecutive whitespace characters to a single space.
@@ -60,6 +61,9 @@ fn parse_input_and_handle_cmd(input: &str) {
                 item.clear();
             }
         } else if ch.eq(&'\'') {
+            if stack[idx.saturating_sub(1)] == b'"' {
+                item.push(ch);
+            }
             if stack[idx.saturating_sub(1)] == b'\'' {
                 stack[idx.saturating_sub(1)] = 0;
                 idx -= 1;
@@ -68,6 +72,13 @@ fn parse_input_and_handle_cmd(input: &str) {
                 idx += 1;
             }
         } else if ch.eq(&'"') {
+            if stack[idx.saturating_sub(1)] == b'"' {
+                stack[idx.saturating_sub(1)] = 0;
+                idx -= 1;
+            } else {
+                stack[idx.saturating_sub(1)] = ch as u8;
+                idx += 1;
+            }
         } else {
             item.push(ch);
         }
@@ -78,11 +89,6 @@ fn parse_input_and_handle_cmd(input: &str) {
         .iter()
         .map(|item| item.as_str())
         .collect::<Vec<&str>>();
-
-    if idx != 0 {
-        eprintln!("Unmatched quotes: {stack:?}");
-        return;
-    }
 
     let cmd = items[0].trim();
     let args = &items[1..];

@@ -86,7 +86,7 @@ pub fn handle_type(arg: Args) {
 pub fn run_program(exec: &str, args: Args) {
     let args = args
         .iter()
-        .map(|arg| arg.trim_matches('\''))
+        .map(|&arg| arg.trim_matches(['\'', '"']))
         .collect::<Vec<_>>();
 
     let paths = get_paths();
