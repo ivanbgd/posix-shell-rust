@@ -50,7 +50,7 @@ fn parse_input_and_handle_cmd(input: &str) {
     for ch in input.chars() {
         if ch.is_ascii_whitespace() {
             // Quoted text should keep all its whitespace characters, but unquoted text should not.
-            // It should decrease several consecutive whitespace characters to a single space.
+            // It should reduce several consecutive whitespace characters to a single space.
             if stack[idx.saturating_sub(1)] == b'\'' || stack[idx.saturating_sub(1)] == b'"' {
                 item.push(ch);
             } else {
@@ -73,6 +73,11 @@ fn parse_input_and_handle_cmd(input: &str) {
         }
     }
     items.push(item.trim().to_string());
+
+    let items = items
+        .iter()
+        .map(|item| item.as_str())
+        .collect::<Vec<&str>>();
 
     if idx != 0 {
         eprintln!("Unmatched quotes: {stack:?}");

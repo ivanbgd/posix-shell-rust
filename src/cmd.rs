@@ -16,7 +16,7 @@ pub fn handle_cd(arg: Args) {
                 return;
             }
         };
-        let arg = if arg.eq("~") { home.as_str() } else { arg };
+        let arg = if arg.eq(&"~") { home.as_str() } else { arg };
 
         if env::set_current_dir(arg).is_err() {
             println!("cd: {arg}: No such file or directory");
@@ -62,8 +62,8 @@ pub fn handle_pwd(_arg: Args) {
 /// In such cases, the type command identifies them as builtins.
 pub fn handle_type(arg: Args) {
     if !arg.is_empty() {
-        let arg = &arg[0];
-        if COMMANDS.contains(&arg.as_str()) {
+        let arg = arg[0];
+        if COMMANDS.contains(&arg) {
             println!("{arg} is a shell builtin");
         } else {
             let paths = get_paths();

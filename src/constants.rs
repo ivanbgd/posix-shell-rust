@@ -18,7 +18,7 @@ pub const HANDLERS: [Handler; NUM_CMDS] =
 pub const STACK_SIZE: usize = 32;
 
 /// Command-handlers' arguments type
-pub type Args<'a> = &'a [String];
+pub type Args<'a> = &'a [&'a str];
 
 /// Command-handlers' type
 pub type Handler = fn(Args) -> ();
