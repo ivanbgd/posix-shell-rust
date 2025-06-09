@@ -17,6 +17,7 @@
 - Supports running external programs with arguments.
     - External programs are located using the [PATH](https://en.wikipedia.org/wiki/PATH_(variable)) environment
       variable.
+- Supports single quotes.
 
 # Running the Program
 

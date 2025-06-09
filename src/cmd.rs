@@ -6,8 +6,9 @@ use std::path::PathBuf;
 use std::process::Command;
 
 /// Handler for the `cd` command
-pub fn handle_cd(arg: Option<&str>) {
+pub fn handle_cd(arg: Option<&[String]>) {
     if let Some(arg) = arg {
+        let arg = &arg[0];
         let home = match env::var("HOME") {
             Ok(val) => val,
             Err(_) => {
@@ -24,19 +25,23 @@ pub fn handle_cd(arg: Option<&str>) {
 }
 
 /// Handler for the `echo` command
-pub fn handle_echo(arg: Option<&str>) {
-    if let Some(arg) = arg {
+pub fn handle_echo(args: Option<&[String]>) {
+    if let Some(arg) = args {
+        let arg = arg.join(" ");
         println!("{arg}");
     };
 }
 
 /// Handler for the `exit` command
-pub fn handle_exit(arg: Option<&str>) {
+pub fn handle_exit(arg: Option<&[String]>) {
     match arg {
-        Some(arg) => match arg.trim().parse::<i32>() {
-            Ok(exit_code) => std::process::exit(exit_code),
-            Err(_) => eprintln!("Invalid exit code: {arg}"),
-        },
+        Some(arg) => {
+            let arg = &arg[0];
+            match arg.trim().parse::<i32>() {
+                Ok(exit_code) => std::process::exit(exit_code),
+                Err(_) => eprintln!("Invalid exit code: {arg}"),
+            }
+        }
         None => std::process::exit(0),
     }
 }
@@ -55,8 +60,9 @@ pub fn handle_pwd() {
 ///
 /// Some commands, such as `echo`, can exist as both builtin commands and executable files.
 /// In such cases, the type command identifies them as builtins.
-pub fn handle_type(arg: Option<&str>) {
+pub fn handle_type(arg: Option<&[String]>) {
     if let Some(arg) = arg {
+        let arg = &arg[0];
         if COMMANDS.contains(&arg.as_bytes()) {
             println!("{arg} is a shell builtin");
         } else {
@@ -77,9 +83,12 @@ pub fn handle_type(arg: Option<&str>) {
 /// Runs external programs with arguments
 ///
 /// External programs are located using the `PATH` environment variable.
-pub fn run_program(exec: &str, args: Option<&str>) {
+pub fn run_program(exec: &str, args: Option<&[String]>) {
     let args = args.unwrap_or_default();
-    let args = args.split_ascii_whitespace();
+    let args = args
+        .iter()
+        .map(|arg| arg.trim_matches('\''))
+        .collect::<Vec<_>>();
 
     let paths = get_paths();
 
