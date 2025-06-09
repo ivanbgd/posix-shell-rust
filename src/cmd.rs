@@ -6,8 +6,8 @@ use std::path::PathBuf;
 use std::process::Command;
 
 /// Handler for the `cd` command
-pub fn handle_cd(arg: Option<&[String]>) {
-    if let Some(arg) = arg {
+pub fn handle_cd(arg: &[String]) {
+    if !arg.is_empty() {
         let arg = &arg[0];
         let home = match env::var("HOME") {
             Ok(val) => val,
@@ -25,24 +25,24 @@ pub fn handle_cd(arg: Option<&[String]>) {
 }
 
 /// Handler for the `echo` command
-pub fn handle_echo(args: Option<&[String]>) {
-    if let Some(arg) = args {
-        let arg = arg.join(" ");
-        println!("{arg}");
+pub fn handle_echo(args: &[String]) {
+    if !args.is_empty() {
+        let args = args.join(" ");
+        println!("{args}");
     };
 }
 
 /// Handler for the `exit` command
-pub fn handle_exit(arg: Option<&[String]>) {
-    match arg {
-        Some(arg) => {
+pub fn handle_exit(arg: &[String]) {
+    match arg.is_empty() {
+        false => {
             let arg = &arg[0];
             match arg.trim().parse::<i32>() {
                 Ok(exit_code) => std::process::exit(exit_code),
                 Err(_) => eprintln!("Invalid exit code: {arg}"),
             }
         }
-        None => std::process::exit(0),
+        true => std::process::exit(0),
     }
 }
 
@@ -60,8 +60,8 @@ pub fn handle_pwd() {
 ///
 /// Some commands, such as `echo`, can exist as both builtin commands and executable files.
 /// In such cases, the type command identifies them as builtins.
-pub fn handle_type(arg: Option<&[String]>) {
-    if let Some(arg) = arg {
+pub fn handle_type(arg: &[String]) {
+    if !arg.is_empty() {
         let arg = &arg[0];
         if COMMANDS.contains(&arg.as_bytes()) {
             println!("{arg} is a shell builtin");
@@ -83,8 +83,7 @@ pub fn handle_type(arg: Option<&[String]>) {
 /// Runs external programs with arguments
 ///
 /// External programs are located using the `PATH` environment variable.
-pub fn run_program(exec: &str, args: Option<&[String]>) {
-    let args = args.unwrap_or_default();
+pub fn run_program(exec: &str, args: &[String]) {
     let args = args
         .iter()
         .map(|arg| arg.trim_matches('\''))

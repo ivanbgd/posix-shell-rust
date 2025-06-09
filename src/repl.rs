@@ -14,6 +14,7 @@
 //!   [Double quotes](https://www.gnu.org/software/bash/manual/bash.html#Double-Quotes)
 
 use crate::cmd::{handle_cd, handle_echo, handle_exit, handle_pwd, handle_type, run_program};
+use crate::constants::STACK_SIZE;
 use std::io::{self, Write};
 
 /// The main shell loop.
@@ -41,13 +42,14 @@ pub fn repl() {
 fn parse_input_and_handle_cmd(input: &str) {
     let mut items: Vec<String> = Vec::new();
     let mut item = String::new();
-    let mut stack: Vec<char> = Vec::new();
+    let mut stack = [0u8; STACK_SIZE];
+    let mut idx = 0usize;
 
     for ch in input.chars() {
         if ch.is_ascii_whitespace() {
             // Quoted text should keep all its whitespace characters, but unquoted text should not.
             // It should decrease several consecutive whitespace characters to a single space.
-            if stack.last().eq(&Some(&'\'')) || stack.last().eq(&Some(&'"')) {
+            if stack[idx.saturating_sub(1)] == b'\'' || stack[idx.saturating_sub(1)] == b'"' {
                 item.push(ch);
             } else {
                 if !item.is_empty() {
@@ -56,10 +58,12 @@ fn parse_input_and_handle_cmd(input: &str) {
                 item.clear();
             }
         } else if ch.eq(&'\'') {
-            if stack.last().eq(&Some(&'\'')) {
-                stack.pop();
+            if stack[idx.saturating_sub(1)] == b'\'' {
+                stack[idx.saturating_sub(1)] = 0;
+                idx -= 1;
             } else {
-                stack.push(ch);
+                stack[idx.saturating_sub(1)] = ch as u8;
+                idx += 1;
             }
         } else if ch.eq(&'"') {
         } else {
@@ -68,16 +72,13 @@ fn parse_input_and_handle_cmd(input: &str) {
     }
     items.push(item.trim().to_string());
 
-    if !stack.is_empty() {
+    if idx != 0 {
         eprintln!("Unmatched quotes: {stack:?}");
         return;
     }
 
-    let (cmd, args) = match items.split_at_checked(1) {
-        Some((cmd, args)) => (cmd, Some(args)),
-        None => (&[items[0].clone()][..], None),
-    };
-    let cmd = &cmd[0];
+    let cmd = &items[0];
+    let args = &items[1..];
 
     match cmd.trim() {
         "cd" => handle_cd(args),
