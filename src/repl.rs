@@ -13,9 +13,11 @@
 //!   The backslash retains its special meaning when followed by `\`, `$`, `"` or newline.
 //!   [Double quotes](https://www.gnu.org/software/bash/manual/bash.html#Double-Quotes)
 
-use crate::cmd::{handle_cd, handle_echo, handle_exit, handle_pwd, handle_type, run_program};
-use crate::constants::STACK_SIZE;
+use crate::cmd::run_program;
+use crate::constants::{Handler, COMMANDS, HANDLERS, STACK_SIZE};
+use std::collections::HashMap;
 use std::io::{self, Write};
+use std::iter::zip;
 
 /// The main shell loop.
 pub fn repl() {
@@ -77,15 +79,22 @@ fn parse_input_and_handle_cmd(input: &str) {
         return;
     }
 
-    let cmd = &items[0];
+    let cmd = items[0].trim();
     let args = &items[1..];
 
-    match cmd.trim() {
-        "cd" => handle_cd(args),
-        "echo" => handle_echo(args),
-        "exit" => handle_exit(args),
-        "pwd" => handle_pwd(),
-        "type" => handle_type(args),
-        exec => run_program(exec, args),
+    let handlers = get_handlers();
+
+    match handlers.get(cmd) {
+        Some(&handler) => handler(args),
+        None => run_program(cmd, args),
     }
+}
+
+/// Builds a table of command handlers and returns them
+fn get_handlers<'a>() -> HashMap<&'a str, Handler> {
+    let pairs: [(&str, Handler); COMMANDS.len()] = zip(COMMANDS, HANDLERS)
+        .collect::<Vec<_>>()
+        .try_into()
+        .expect("Failed to convert vector to array");
+    HashMap::from(pairs)
 }

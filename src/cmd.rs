@@ -1,12 +1,12 @@
 //! Command handlers
 
-use crate::constants::COMMANDS;
+use crate::constants::{Args, COMMANDS};
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 
 /// Handler for the `cd` command
-pub fn handle_cd(arg: &[String]) {
+pub fn handle_cd(arg: Args) {
     if !arg.is_empty() {
         let arg = &arg[0];
         let home = match env::var("HOME") {
@@ -25,7 +25,7 @@ pub fn handle_cd(arg: &[String]) {
 }
 
 /// Handler for the `echo` command
-pub fn handle_echo(args: &[String]) {
+pub fn handle_echo(args: Args) {
     if !args.is_empty() {
         let args = args.join(" ");
         println!("{args}");
@@ -33,7 +33,7 @@ pub fn handle_echo(args: &[String]) {
 }
 
 /// Handler for the `exit` command
-pub fn handle_exit(arg: &[String]) {
+pub fn handle_exit(arg: Args) {
     match arg.is_empty() {
         false => {
             let arg = &arg[0];
@@ -47,7 +47,7 @@ pub fn handle_exit(arg: &[String]) {
 }
 
 /// Handler for the `pwd` command
-pub fn handle_pwd() {
+pub fn handle_pwd(_arg: Args) {
     match env::current_dir() {
         Ok(pwd) => println!("{}", pwd.display()),
         Err(err) => eprintln!("{err}"),
@@ -60,10 +60,10 @@ pub fn handle_pwd() {
 ///
 /// Some commands, such as `echo`, can exist as both builtin commands and executable files.
 /// In such cases, the type command identifies them as builtins.
-pub fn handle_type(arg: &[String]) {
+pub fn handle_type(arg: Args) {
     if !arg.is_empty() {
         let arg = &arg[0];
-        if COMMANDS.contains(&arg.as_bytes()) {
+        if COMMANDS.contains(&arg.as_str()) {
             println!("{arg} is a shell builtin");
         } else {
             let paths = get_paths();
@@ -83,7 +83,7 @@ pub fn handle_type(arg: &[String]) {
 /// Runs external programs with arguments
 ///
 /// External programs are located using the `PATH` environment variable.
-pub fn run_program(exec: &str, args: &[String]) {
+pub fn run_program(exec: &str, args: Args) {
     let args = args
         .iter()
         .map(|arg| arg.trim_matches('\''))
