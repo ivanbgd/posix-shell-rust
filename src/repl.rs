@@ -56,6 +56,9 @@ fn parse_input_and_handle_cmd(input: &str) {
     let cmd = items[0].trim();
     let args = if items.len() > 1 { &items[1..] } else { &[] };
 
+    // eprintln!("cmd: {cmd:?}");
+    // eprintln!("args: {args:?}");
+
     match handlers.get(cmd) {
         Some(&handler) => handler(args),
         None => run_program(cmd, args),
@@ -89,14 +92,19 @@ fn parse_input(input: &str) -> Vec<String> {
     let mut item = String::new();
     let mut stack = [0u8; STACK_SIZE];
     let mut idx = 0usize;
+    let mut escape = false;
 
     for ch in input.chars() {
         // eprintln!("{ch} {:?} {idx} {item}", &stack[..16]);
         if ch.is_ascii_whitespace() {
             // Quoted text should keep all its whitespace characters, but unquoted text should not.
             // It should reduce several consecutive whitespace characters to a single space.
-            if stack[idx.saturating_sub(1)] == b'\'' || stack[idx.saturating_sub(1)] == b'"' {
+            if stack[idx.saturating_sub(1)] == b'\''
+                || stack[idx.saturating_sub(1)] == b'"'
+                || escape
+            {
                 item.push(ch);
+                escape = false;
             } else {
                 if !item.is_empty() {
                     items.push(item.to_string());
@@ -104,8 +112,9 @@ fn parse_input(input: &str) -> Vec<String> {
                 item.clear();
             }
         } else if ch.eq(&'\'') {
-            if stack[idx.saturating_sub(1)] == b'"' {
+            if stack[idx.saturating_sub(1)] == b'"' || escape {
                 item.push(ch);
+                escape = false;
             } else if stack[idx.saturating_sub(1)] == b'\'' {
                 stack[idx.saturating_sub(1)] = 0;
                 idx -= 1;
@@ -114,8 +123,9 @@ fn parse_input(input: &str) -> Vec<String> {
                 idx += 1;
             }
         } else if ch.eq(&'"') {
-            if stack[idx.saturating_sub(1)] == b'\'' {
+            if stack[idx.saturating_sub(1)] == b'\'' || escape {
                 item.push(ch);
+                escape = false;
             } else if stack[idx.saturating_sub(1)] == b'"' {
                 stack[idx.saturating_sub(1)] = 0;
                 idx -= 1;
@@ -123,8 +133,14 @@ fn parse_input(input: &str) -> Vec<String> {
                 stack[idx.saturating_sub(1)] = ch as u8;
                 idx += 1;
             }
+        } else if ch.eq(&'\\') {
+            if stack[idx.saturating_sub(1)] == b'"' || escape {
+                item.push(ch);
+            }
+            escape = true;
         } else {
             item.push(ch);
+            escape = false;
         }
     }
     items.push(item.trim().to_string());

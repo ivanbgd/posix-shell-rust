@@ -17,7 +17,9 @@
 - Supports running external programs with arguments.
     - External programs are located using the [PATH](https://en.wikipedia.org/wiki/PATH_(variable)) environment
       variable.
-- Supports single quotes.
+- Supports [single quotes](https://www.gnu.org/software/bash/manual/bash.html#Single-Quotes).
+- Supports [double quotes](https://www.gnu.org/software/bash/manual/bash.html#Double-Quotes).
+- Supports [escape character](https://www.gnu.org/software/bash/manual/bash.html#Escape-Character) outside quotes.
 
 # Running the Program
 
