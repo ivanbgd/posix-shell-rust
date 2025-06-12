@@ -141,8 +141,6 @@ fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
     let mut item = String::new();
 
     let mut state = Fsm::Unquoted;
-    let mut single = false;
-    let mut double = false;
     let mut escape = false;
 
     for ch in input.chars() {
@@ -162,10 +160,8 @@ fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
                     if escape {
                         item.pop();
                         item.push(ch);
-                        single = false;
                     } else {
                         state = Fsm::Single;
-                        single = !single;
                     }
                     escape = false;
                 }
@@ -173,10 +169,8 @@ fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
                     if escape {
                         item.pop();
                         item.push(ch);
-                        double = false;
                     } else {
                         state = Fsm::Double;
-                        double = !double;
                     }
                     escape = false;
                 }
@@ -255,7 +249,7 @@ fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
             },
         }
         if DEBUG {
-            eprintln!("{ch} -> {state:?} s: {single} d: {double} e: {escape}\t{item}");
+            eprintln!("{ch} -> {state:?} e: {escape}\t{item}");
         }
     }
     items.push(item.to_string());
@@ -463,7 +457,8 @@ mod tests {
         assert_eq!(expected, result[1..]);
 
         input = r#"echo \   test"#;
-        expected = vec![r#"  test"#.to_string()];
+        // expected = vec![r#"  test"#.to_string()];
+        expected = vec![r#" "#.to_string(), r#"test"#.to_string()];
         result = parse_input(input).unwrap();
         assert_eq!(expected, result[1..]);
     }
@@ -481,12 +476,14 @@ mod tests {
         assert_eq!(expected, result[1..]);
 
         input = r#"echo \'\"shell world\"\'"#;
-        expected = vec![r#"'"shell world"'"#.to_string()];
+        // expected = vec![r#"'"shell world"'"#.to_string()];
+        expected = vec![r#"'"shell"#.to_string(), r#"world"'"#.to_string()];
         result = parse_input(input).unwrap();
         assert_eq!(expected, result[1..]);
 
         input = r#"echo \"\'shell world\'\""#;
-        expected = vec![r#""'shell world'""#.to_string()];
+        // expected = vec![r#""'shell world'""#.to_string()];
+        expected = vec![r#""'shell"#.to_string(), r#"world'""#.to_string()];
         result = parse_input(input).unwrap();
         assert_eq!(expected, result[1..]);
     }
