@@ -565,6 +565,24 @@ mod tests {
     }
 
     #[test]
+    fn escape_06() {
+        let mut input = r#"echo "world'hello'\\'example""#;
+        let mut expected = vec![r#"world'hello'\'example"#.to_string()];
+        let mut result = parse_input(input).unwrap();
+        assert_eq!(expected, result[1..]);
+
+        input = r#"echo "world\"insidequotes"hello\""#;
+        expected = vec![r#"world"insidequoteshello""#.to_string()];
+        result = parse_input(input).unwrap();
+        assert_eq!(expected, result[1..]);
+
+        input = r#"echo "mixed\"quote'test'\\""#;
+        expected = vec![r#"mixed"quote'test'\"#.to_string()];
+        result = parse_input(input).unwrap();
+        assert_eq!(expected, result[1..]);
+    }
+
+    #[test]
     fn invalid_input() {
         let mut expected = InvalidInputError {
             reason: "unmatched escape character".to_string(),
