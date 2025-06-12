@@ -25,6 +25,10 @@ enum Fsm {
     Single,
     /// Double quote is active
     Double,
+    /// No quotes are active, escape is active
+    UnquotedEscape,
+    /// Double quote is active, escape is active
+    DoubleEscape,
 }
 
 impl Display for Fsm {
@@ -32,6 +36,8 @@ impl Display for Fsm {
         let reason = match self {
             Fsm::Single => "unmatched single quotes",
             Fsm::Double => "unmatched double quotes",
+            Fsm::UnquotedEscape => "unmatched escape character",
+            Fsm::DoubleEscape => "unmatched escape character",
             state => panic!("finishing in the '{state:?}' state is not an error"),
         };
 
@@ -67,52 +73,28 @@ pub fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
     let mut item = String::new();
 
     let mut state = Fsm::Unquoted;
-    let mut escape = false;
 
     for ch in input.chars() {
         match state {
             Fsm::Unquoted => match ch {
                 ' ' | '\t' | '\n' => {
-                    if escape {
-                        item.pop();
-                        item.push(ch);
-                    } else if !item.is_empty() {
+                    if !item.is_empty() {
                         items.push(item.to_string());
                         item.clear();
                     }
-                    escape = false;
                 }
                 '\'' => {
-                    if escape {
-                        item.pop();
-                        item.push(ch);
-                    } else {
-                        state = Fsm::Single;
-                    }
-                    escape = false;
+                    state = Fsm::Single;
                 }
                 '"' => {
-                    if escape {
-                        item.pop();
-                        item.push(ch);
-                    } else {
-                        state = Fsm::Double;
-                    }
-                    escape = false;
+                    state = Fsm::Double;
                 }
                 '\\' => {
-                    if escape {
-                        item.pop();
-                    }
                     item.push(ch);
-                    escape = !escape;
+                    state = Fsm::UnquotedEscape;
                 }
                 _ => {
-                    if escape {
-                        item.pop();
-                    }
                     item.push(ch);
-                    escape = false;
                 }
             },
             Fsm::Single => match ch {
@@ -124,49 +106,55 @@ pub fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
             },
             Fsm::Double => match ch {
                 '\'' => {
-                    escape = false;
                     item.push(ch);
                 }
                 '"' => {
-                    if escape {
-                        item.pop();
-                        item.push(ch);
-                    } else {
-                        state = Fsm::Unquoted;
-                    }
-                    escape = false;
+                    state = Fsm::Unquoted;
                 }
                 '\\' => {
-                    if escape {
-                        item.pop();
-                    }
                     item.push(ch);
-                    escape = !escape;
-                }
-                '$' | '`' | '\n' => {
-                    if escape {
-                        item.pop();
-                    }
-                    item.push(ch);
-                    escape = false;
+                    state = Fsm::DoubleEscape;
                 }
                 _ => {
                     item.push(ch);
-                    escape = false;
+                }
+            },
+            Fsm::UnquotedEscape => {
+                item.pop();
+                item.push(ch);
+                state = Fsm::Unquoted;
+            }
+            Fsm::DoubleEscape => match ch {
+                '\'' => {
+                    item.push(ch);
+                    state = Fsm::Double;
+                }
+                '"' => {
+                    item.pop();
+                    item.push(ch);
+                    state = Fsm::Double;
+                }
+                '\\' => {
+                    item.pop();
+                    item.push(ch);
+                    state = Fsm::Double;
+                }
+                '$' | '`' | '\n' => {
+                    item.pop();
+                    item.push(ch);
+                    state = Fsm::Double;
+                }
+                _ => {
+                    item.push(ch);
+                    state = Fsm::Double;
                 }
             },
         }
         if DEBUG {
-            eprintln!("{ch} -> {state:?} e: {escape}\t{item}");
+            eprintln!("{ch} -> {state:?}\t{item}");
         }
     }
     items.push(item.to_string());
-
-    if escape {
-        return Err(InvalidInputError {
-            reason: "unmatched escape character".to_string(),
-        });
-    }
 
     match state {
         Fsm::Unquoted => Ok(items),
