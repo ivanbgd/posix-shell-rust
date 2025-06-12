@@ -25,10 +25,6 @@ enum Fsm {
     Single,
     /// Double quote is active
     Double,
-    /// Double quote nested in single quote is active
-    SingleDouble,
-    /// Single quote nested in double quote is active
-    DoubleSingle,
 }
 
 impl Display for Fsm {
@@ -122,14 +118,12 @@ pub fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
             Fsm::Single => match ch {
                 '\'' => state = Fsm::Unquoted,
                 '"' => {
-                    state = Fsm::SingleDouble;
                     item.push(ch);
                 }
                 _ => item.push(ch),
             },
             Fsm::Double => match ch {
                 '\'' => {
-                    state = Fsm::DoubleSingle;
                     escape = false;
                     item.push(ch);
                 }
@@ -161,22 +155,6 @@ pub fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
                     escape = false;
                 }
             },
-            Fsm::SingleDouble => match ch {
-                '\'' => state = Fsm::Unquoted,
-                '"' => {
-                    state = Fsm::Single;
-                    item.push(ch);
-                }
-                _ => item.push(ch),
-            },
-            Fsm::DoubleSingle => match ch {
-                '\'' => {
-                    state = Fsm::Double;
-                    item.push(ch);
-                }
-                '"' => state = Fsm::Unquoted,
-                _ => item.push(ch),
-            },
         }
         if DEBUG {
             eprintln!("{ch} -> {state:?} e: {escape}\t{item}");
@@ -191,7 +169,7 @@ pub fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
     }
 
     match state {
-        Fsm::Unquoted | Fsm::SingleDouble | Fsm::DoubleSingle => Ok(items),
+        Fsm::Unquoted => Ok(items),
         other => Err(InvalidInputError {
             reason: other.to_string(),
         }),
@@ -405,13 +383,11 @@ mod tests {
         assert_eq!(expected, result[1..]);
 
         input = r#"echo \'\"shell world\"\'"#;
-        // expected = vec![r#"'"shell world"'"#.to_string()];
         expected = vec![r#"'"shell"#.to_string(), r#"world"'"#.to_string()];
         result = parse_input(input).unwrap();
         assert_eq!(expected, result[1..]);
 
         input = r#"echo \"\'shell world\'\""#;
-        // expected = vec![r#""'shell world'""#.to_string()];
         expected = vec![r#""'shell"#.to_string(), r#"world'""#.to_string()];
         result = parse_input(input).unwrap();
         assert_eq!(expected, result[1..]);
