@@ -14,6 +14,7 @@
 
 # Notes
 
+- [Bash](https://www.gnu.org/software/bash/) is used as a reference.
 - Supports running external programs with arguments.
     - External programs are located using the [PATH](https://en.wikipedia.org/wiki/PATH_(variable)) environment
       variable.

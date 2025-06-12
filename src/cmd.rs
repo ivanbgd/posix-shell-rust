@@ -26,10 +26,7 @@ pub fn handle_cd(arg: Args) {
 
 /// Handler for the `echo` command
 pub fn handle_echo(args: Args) {
-    if !args.is_empty() {
-        let args = args.join(" ");
-        println!("{args}");
-    };
+    println!("{}", args.join(" "));
 }
 
 /// Handler for the `exit` command
@@ -84,11 +81,6 @@ pub fn handle_type(arg: Args) {
 ///
 /// External programs are located using the `PATH` environment variable.
 pub fn run_program(exec: &str, args: Args) {
-    let args = args
-        .iter()
-        .map(|&arg| arg.trim_matches(['\'', '"']))
-        .collect::<Vec<_>>();
-
     let paths = get_paths();
 
     for path in paths {
@@ -98,6 +90,7 @@ pub fn run_program(exec: &str, args: Args) {
                 .output()
                 .expect("Failed to execute command");
             print!("{}", String::from_utf8(output.stdout).unwrap());
+            eprint!("{}", String::from_utf8(output.stderr).unwrap());
             return;
         }
     }

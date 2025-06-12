@@ -4,6 +4,9 @@
 
 use crate::cmd::{handle_cd, handle_echo, handle_exit, handle_pwd, handle_type};
 
+/// Allows debug printouts
+pub const DEBUG: bool = true;
+
 /// Number of supported shell commands
 const NUM_CMDS: usize = 5;
 
@@ -14,8 +17,11 @@ pub const COMMANDS: [&str; NUM_CMDS] = ["cd", "echo", "exit", "pwd", "type"];
 pub const HANDLERS: [Handler; NUM_CMDS] =
     [handle_cd, handle_echo, handle_exit, handle_pwd, handle_type];
 
-/// Stack size in bytes
-pub const STACK_SIZE: usize = 32;
+/// The shell prompt
+pub const PROMPT: &str = "$ ";
+
+/// An error message for invalid input
+pub const INVALID_INPUT_MSG: &str = "invalid input";
 
 /// Command-handlers' arguments type
 pub type Args<'a> = &'a [&'a str];
