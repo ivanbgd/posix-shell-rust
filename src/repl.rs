@@ -20,6 +20,8 @@ use std::iter::zip;
 
 /// The main shell loop.
 pub fn repl() {
+    get_debug();
+
     loop {
         // Print prompt
         print!("{PROMPT}");
@@ -64,7 +66,7 @@ fn parse_input_and_handle_cmd(input: &str) {
         None => run_program(cmd, args),
     };
 
-    if DEBUG {
+    if DEBUG.get().is_some_and(|&debug| debug) {
         eprintln!("cmd: {cmd:?}");
         eprintln!("args: {args:?}");
         eprintln!("target: {target:?}");
@@ -119,4 +121,21 @@ fn redirect(output: &str, target: &str, append: bool) {
             eprintln!("{err}: Failed to write to file '{target}'");
         }
     }
+}
+
+/// Copies the value of the environment variable `DEBUG`, if it exists, to the global variable `DEBUG`,
+/// and if it doesn't exist, sets the global variable `DEBUG` to `false`.
+///
+/// If the environment variable `DEBUG` exists, it must hold string `true` for the global variable `DEBUG`
+/// to be set; otherwise, the global variable `DEBUG` will be reset.
+fn get_debug() {
+    let key: Option<&'static str> = option_env!("DEBUG");
+
+    let debug: bool = if let Some(key) = key {
+        key.trim().parse().unwrap_or_default()
+    } else {
+        false
+    };
+
+    DEBUG.get_or_init(|| debug);
 }

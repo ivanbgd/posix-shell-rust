@@ -196,7 +196,7 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
                 }
             },
         }
-        if DEBUG {
+        if DEBUG.get().is_some_and(|&debug| debug) {
             eprintln!("{ch} -> {state:?} {redirect:?}\t{item}");
         }
     }

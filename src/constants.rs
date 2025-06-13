@@ -1,12 +1,13 @@
-//! # Constants and Types
+//! # Constants, Globals and Types
 //!
-//! Constants and types used throughout the application
+//! Constants, global variables and types used throughout the application
 
 use crate::cmd::{handle_cd, handle_echo, handle_exit, handle_pwd, handle_type};
 use crate::errors::OutputError;
+use std::sync::OnceLock;
 
 /// Allows debug printouts
-pub const DEBUG: bool = true;
+pub static DEBUG: OnceLock<bool> = OnceLock::new();
 
 /// Number of supported shell commands
 const NUM_CMDS: usize = 5;
