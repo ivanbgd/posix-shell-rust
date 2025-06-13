@@ -21,6 +21,9 @@
 - Supports [single quotes](https://www.gnu.org/software/bash/manual/bash.html#Single-Quotes).
 - Supports [double quotes](https://www.gnu.org/software/bash/manual/bash.html#Double-Quotes).
 - Supports [escape character](https://www.gnu.org/software/bash/manual/bash.html#Escape-Character) outside quotes.
+- Supports [redirecting output](https://www.gnu.org/software/bash/manual/bash.html#Redirecting-Output).
+- Some variants of some features may not be supported, i.e., not all features are fully-supported, with all their
+  details and options.
 
 # Running the Program
 

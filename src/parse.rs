@@ -3,6 +3,7 @@
 //! # References
 //!
 //! - [Bash Reference Manual](https://www.gnu.org/software/bash/manual/html_node/)
+//! - [Quoting](https://www.gnu.org/software/bash/manual/bash.html#Quoting)
 //! - Enclosing characters in single quotes preserves the literal value of each character within the quotes.
 //!   [Single Quotes](https://www.gnu.org/software/bash/manual/bash.html#Single-Quotes)
 //! - Enclosing characters in double quotes preserves the literal value of each character within the quotes except `\`.
@@ -11,12 +12,14 @@
 //! - A non-quoted backslash `\` is treated as an escape character.
 //!   It preserves the literal value of the next character.
 //!   [Escape Character](https://www.gnu.org/software/bash/manual/bash.html#Escape-Character)
+//! - [Redirecting Output](https://www.gnu.org/software/bash/manual/bash.html#Redirecting-Output)
 
 use crate::constants::DEBUG;
 use crate::errors::InvalidInputError;
+use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
 
-/// Finite state machine that changes state depending on quoting
+/// Finite state machine that changes state depending on quoting and escaping
 #[derive(Debug)]
 enum Fsm {
     /// No quotes are active
@@ -36,8 +39,7 @@ impl Display for Fsm {
         let reason = match self {
             Fsm::Single => "unmatched single quotes",
             Fsm::Double => "unmatched double quotes",
-            Fsm::UnquotedEscape => "unmatched escape character",
-            Fsm::DoubleEscape => "unmatched escape character",
+            Fsm::UnquotedEscape | Fsm::DoubleEscape => "unmatched escape character",
             state => panic!("finishing in the '{state:?}' state is not an error"),
         };
 
@@ -45,41 +47,67 @@ impl Display for Fsm {
     }
 }
 
+/// Type of redirection containing the target, if any
+#[derive(Debug, PartialEq)]
+pub enum Redirect {
+    None,
+    Stdout(String),
+    Stderr(String),
+    AppendStdout(String),
+    AppendStderr(String),
+}
+
+impl Redirect {
+    /// Creates a new [`Redirect`] from an existing one, with the new `target` value
+    fn from(self, target: String) -> Self {
+        match self {
+            Redirect::None => Redirect::None,
+            Redirect::Stdout(_) => Redirect::Stdout(target),
+            Redirect::Stderr(_) => Redirect::Stderr(target),
+            Redirect::AppendStdout(_) => Redirect::AppendStdout(target),
+            Redirect::AppendStderr(_) => Redirect::AppendStderr(target),
+        }
+    }
+}
+
 /// Parses user input and returns parsed items
-///
-/// An item can be more than a single word if it was quoted in the input.
-///
-/// Conversely, two or more words from the input can be merged into a single word (item)
-/// if they were separated only by a matching pair of quotes in the input.
-///
-/// Escaping with backslash, `\`, is also supported.
 ///
 /// # References
 /// - [Field Splitting](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_05)
 /// - https://doc.rust-lang.org/std/primitive.char.html#method.is_ascii_whitespace
-///
-/// # Examples
-///
-/// ```shell
-/// $   echo  hi   there,   'hello   world'  'hi''"there"'  "and""again"  "Hello   world,   it's   me"   bye   bye.
-/// hi there, hello   world hi"there" andagain Hello   world,   it's   me bye bye.
-/// ```
-pub fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
+/// - [Quoting](https://www.gnu.org/software/bash/manual/bash.html#Quoting)
+/// - [Redirecting Output](https://www.gnu.org/software/bash/manual/bash.html#Redirecting-Output)
+pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputError> {
+    // An item can be more than a single word if it was quoted in the input.
+    // Conversely, two or more words from the input can be merged into a single word (item)
+    // if they were separated only by a matching pair of quotes in the input.
+    // Escaping with backslash, `\`, is also supported.
+
     // Quoted text (single or double quotes) should keep all its whitespace characters,
     // but unquoted text should not, unless escaped.
     // Unquoted text should compress several consecutive whitespace characters into a single space, unless escaped.
 
+    let input = input.chars().peekable();
+
     let mut items: Vec<String> = Vec::new();
     let mut item = String::new();
 
+    // Redirection target
+    let mut target: String = String::new();
+    let mut redirect = Redirect::None;
+
     let mut state = Fsm::Unquoted;
 
-    for ch in input.chars() {
+    for ch in input {
         match state {
             Fsm::Unquoted => match ch {
                 ' ' | '\t' | '\n' => {
                     if !item.is_empty() {
-                        items.push(item.to_string());
+                        if redirect.eq(&Redirect::None) {
+                            items.push(item.to_string());
+                        } else {
+                            target.push_str(item.as_str());
+                        }
                         item.clear();
                     }
                 }
@@ -93,6 +121,24 @@ pub fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
                     item.push(ch);
                     state = Fsm::UnquotedEscape;
                 }
+                '>' => match redirect {
+                    Redirect::None => {
+                        if item.eq("1") {
+                            item = String::new();
+                            redirect = Redirect::Stdout(target.clone());
+                        } else if item.eq("2") {
+                            item = String::new();
+                            redirect = Redirect::Stderr(target.clone());
+                        } else {
+                            redirect = Redirect::Stdout(target.clone());
+                        }
+                    }
+                    Redirect::Stdout(trg) => redirect = Redirect::AppendStdout(trg),
+                    Redirect::Stderr(trg) => redirect = Redirect::AppendStderr(trg),
+                    Redirect::AppendStdout(_) | Redirect::AppendStderr(_) => {
+                        return Err("shell: syntax error near unexpected token `>'".into());
+                    }
+                },
                 _ => {
                     item.push(ch);
                 }
@@ -151,13 +197,19 @@ pub fn parse_input(input: &str) -> Result<Vec<String>, InvalidInputError> {
             },
         }
         if DEBUG {
-            eprintln!("{ch} -> {state:?}\t{item}");
+            eprintln!("{ch} -> {state:?} {redirect:?}\t{item}");
         }
     }
-    items.push(item.to_string());
+    if redirect.eq(&Redirect::None) {
+        items.push(item.to_string());
+    } else {
+        target.push_str(item.as_str());
+    }
+
+    let redirect = redirect.from(target);
 
     match state {
-        Fsm::Unquoted => Ok(items),
+        Fsm::Unquoted => Ok((items, redirect)),
         other => Err(InvalidInputError {
             reason: other.to_string(),
         }),

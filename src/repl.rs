@@ -11,8 +11,10 @@
 
 use crate::cmd::run_program;
 use crate::constants::{Handler, COMMANDS, DEBUG, HANDLERS, PROMPT};
-use crate::parse::parse_input;
+use crate::parse::{parse_input, Redirect};
 use std::collections::HashMap;
+use std::fs;
+use std::fs::OpenOptions;
 use std::io::{self, Write};
 use std::iter::zip;
 
@@ -41,7 +43,7 @@ pub fn repl() {
 fn parse_input_and_handle_cmd(input: &str) {
     let handlers = get_handlers();
 
-    let items = match parse_input(input) {
+    let (items, target) = match parse_input(input) {
         Ok(items) => items,
         Err(error) => {
             eprintln!("{error}");
@@ -57,14 +59,31 @@ fn parse_input_and_handle_cmd(input: &str) {
     let cmd = items[0].trim();
     let args = if items.len() > 1 { &items[1..] } else { &[] };
 
+    let output = match handlers.get(cmd) {
+        Some(&handler) => handler(args),
+        None => run_program(cmd, args),
+    };
+
     if DEBUG {
         eprintln!("cmd: {cmd:?}");
         eprintln!("args: {args:?}");
+        eprintln!("target: {target:?}");
+        eprintln!("output: {output:?}");
+        eprintln!();
     }
 
-    match handlers.get(cmd) {
-        Some(&handler) => handler(args),
-        None => run_program(cmd, args),
+    let is_output_ok = output.is_ok();
+    let output = output.unwrap_or_else(|err| err.to_string());
+
+    match target {
+        Redirect::None => match is_output_ok {
+            true => print!("{output}"),
+            false => eprint!("{output}"),
+        },
+        Redirect::Stdout(target) | Redirect::Stderr(target) => redirect(&output, &target, false),
+        Redirect::AppendStdout(target) | Redirect::AppendStderr(target) => {
+            redirect(&output, &target, true)
+        }
     }
 }
 
@@ -74,5 +93,30 @@ fn get_handlers<'a>() -> HashMap<&'a str, Handler> {
         .collect::<Vec<_>>()
         .try_into()
         .expect("Failed to convert vector to array");
+
     HashMap::from(pairs)
+}
+
+/// Helper for writing redirected output to the given target file
+///
+/// # References
+/// - [Redirecting Output](https://www.gnu.org/software/bash/manual/bash.html#Redirecting-Output)
+/// - [Appending Redirected Output](https://www.gnu.org/software/bash/manual/bash.html#Appending-Redirected-Output)
+fn redirect(output: &str, target: &str, append: bool) {
+    if !append {
+        if let Err(err) = fs::write(target, output) {
+            eprintln!("{err}: Failed to write to file '{target}'");
+        }
+    } else {
+        let mut file = match OpenOptions::new().append(true).open(target) {
+            Ok(file) => file,
+            Err(err) => {
+                eprintln!("{err}: Failed to open the file '{target}'");
+                return;
+            }
+        };
+        if let Err(err) = write!(file, "{}", output) {
+            eprintln!("{err}: Failed to write to file '{target}'");
+        }
+    }
 }

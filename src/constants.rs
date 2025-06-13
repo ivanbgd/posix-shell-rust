@@ -3,6 +3,7 @@
 //! Constants and types used throughout the application
 
 use crate::cmd::{handle_cd, handle_echo, handle_exit, handle_pwd, handle_type};
+use crate::errors::OutputError;
 
 /// Allows debug printouts
 pub const DEBUG: bool = true;
@@ -27,4 +28,4 @@ pub const INVALID_INPUT_MSG: &str = "invalid input";
 pub type Args<'a> = &'a [&'a str];
 
 /// Command-handlers' type
-pub type Handler = fn(Args) -> ();
+pub type Handler = fn(Args) -> Result<String, OutputError>;
