@@ -13,6 +13,7 @@
 //!   It preserves the literal value of the next character.
 //!   [Escape Character](https://www.gnu.org/software/bash/manual/bash.html#Escape-Character)
 //! - [Redirecting Output](https://www.gnu.org/software/bash/manual/bash.html#Redirecting-Output)
+//! - [Appending Redirected Output](https://www.gnu.org/software/bash/manual/bash.html#Appending-Redirected-Output)
 
 use crate::constants::DEBUG;
 use crate::errors::InvalidInputError;
@@ -48,6 +49,8 @@ impl Display for Fsm {
 }
 
 /// Type of redirection containing the target, if any
+///
+/// This is effectively treated as a mini FSM inside the main FSM.
 #[derive(Debug, PartialEq)]
 pub enum Redirect {
     None,
@@ -87,7 +90,7 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
     // but unquoted text should not, unless escaped.
     // Unquoted text should compress several consecutive whitespace characters into a single space, unless escaped.
 
-    let input = input.chars().peekable();
+    let mut input = input.chars().peekable();
 
     let mut items: Vec<String> = Vec::new();
     let mut item = String::new();
@@ -98,7 +101,7 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
 
     let mut state = Fsm::Unquoted;
 
-    for ch in input {
+    while let Some(ch) = input.next() {
         match state {
             Fsm::Unquoted => match ch {
                 ' ' | '\t' | '\n' => {
@@ -139,6 +142,39 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
                         return Err("shell: syntax error near unexpected token `>'".into());
                     }
                 },
+                '&' => {
+                    let next = input.peek().unwrap_or(&' ');
+                    match redirect {
+                        Redirect::None => {
+                            // & is used for background operation, and && as logical AND.
+                            unimplemented!("not implemented: &");
+                        }
+                        Redirect::Stdout(ref trg) => {
+                            if next.eq(&'2') {
+                                redirect = Redirect::Stderr(trg.to_owned());
+                                input.next();
+                            }
+                        }
+                        Redirect::Stderr(ref trg) => {
+                            if next.eq(&'1') {
+                                redirect = Redirect::Stdout(trg.to_owned());
+                                input.next();
+                            }
+                        }
+                        Redirect::AppendStdout(ref trg) => {
+                            if next.eq(&'2') {
+                                redirect = Redirect::AppendStderr(trg.to_owned());
+                                input.next();
+                            }
+                        }
+                        Redirect::AppendStderr(ref trg) => {
+                            if next.eq(&'1') {
+                                redirect = Redirect::AppendStdout(trg.to_owned());
+                                input.next();
+                            }
+                        }
+                    }
+                }
                 _ => {
                     item.push(ch);
                 }

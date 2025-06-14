@@ -2,8 +2,7 @@
 //!
 //! Constants, global variables and types used throughout the application
 
-use crate::cmd::{handle_cd, handle_echo, handle_exit, handle_pwd, handle_type};
-use crate::errors::OutputError;
+use crate::cmd::{handle_cd, handle_echo, handle_exit, handle_pwd, handle_type, Output};
 use std::sync::OnceLock;
 
 /// Allows debug printouts
@@ -20,13 +19,22 @@ pub const HANDLERS: [Handler; NUM_CMDS] =
     [handle_cd, handle_echo, handle_exit, handle_pwd, handle_type];
 
 /// The shell prompt
-pub const PROMPT: &str = "$ ";
+pub const PROMPT: &[u8] = b"$ ";
 
-/// An error message for invalid input
+/// Error message for invalid input
 pub const INVALID_INPUT_MSG: &str = "invalid input";
+
+/// Expect message for a failed read line from `stdin`
+pub const FAILED_READ_LINE: &str = "Read line failed";
+/// Expect message for a failed write to `stdout`
+pub const FAILED_WRITE_TO_STDOUT: &str = "Write to stdout failed";
+/// Expect message for a failed write to `stderr`
+pub const FAILED_WRITE_TO_STDERR: &str = "Write to stderr failed";
+/// Expect message for a failed flush
+pub const FAILED_FLUSH: &str = "Flush failed";
 
 /// Command-handlers' arguments type
 pub type Args<'a> = &'a [&'a str];
 
 /// Command-handlers' type
-pub type Handler = fn(Args) -> Result<String, OutputError>;
+pub type Handler = fn(Args) -> Output;

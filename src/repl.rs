@@ -10,26 +10,33 @@
 //! - [Bash Reference Manual](https://www.gnu.org/software/bash/manual/html_node/)
 
 use crate::cmd::run_program;
-use crate::constants::{Handler, COMMANDS, DEBUG, HANDLERS, PROMPT};
+use crate::constants::{
+    Handler, COMMANDS, DEBUG, FAILED_FLUSH, FAILED_READ_LINE,
+    FAILED_WRITE_TO_STDERR, FAILED_WRITE_TO_STDOUT, HANDLERS, PROMPT,
+};
 use crate::parse::{parse_input, Redirect};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::OpenOptions;
-use std::io::{self, Write};
+use std::io::{self, Stderr, Stdout, Write};
 use std::iter::zip;
 
 /// The main shell loop.
 pub fn repl() {
     get_debug();
 
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    let mut stderr = io::stderr();
+
     loop {
         // Print prompt
-        print!("{PROMPT}");
-        io::stdout().flush().expect("Flush failed");
+        stdout.write_all(PROMPT).expect(FAILED_WRITE_TO_STDOUT);
+        stdout.flush().expect(FAILED_FLUSH);
 
         // Wait for user input
         let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Read line failed");
+        stdin.read_line(&mut input).expect(FAILED_READ_LINE);
 
         let input = input.trim();
 
@@ -37,18 +44,18 @@ pub fn repl() {
             continue;
         }
 
-        parse_input_and_handle_cmd(input);
+        parse_input_and_handle_cmd(&mut stdout, &mut stderr, input);
     }
 }
 
 /// Parses user input and calls the appropriate command or program handler
-fn parse_input_and_handle_cmd(input: &str) {
+fn parse_input_and_handle_cmd(stdout: &mut Stdout, stderr: &mut Stderr, input: &str) {
     let handlers = get_handlers();
 
-    let (items, target) = match parse_input(input) {
+    let (items, redirect) = match parse_input(input) {
         Ok(items) => items,
         Err(error) => {
-            eprintln!("{error}");
+            write!(stderr, "{error}").expect(FAILED_WRITE_TO_STDERR);
             return;
         }
     };
@@ -69,24 +76,52 @@ fn parse_input_and_handle_cmd(input: &str) {
     if DEBUG.get().is_some_and(|&debug| debug) {
         eprintln!("cmd: {cmd:?}");
         eprintln!("args: {args:?}");
-        eprintln!("target: {target:?}");
-        eprintln!("output: {output:?}");
+        eprintln!("redirect: {redirect:?}");
+        eprintln!("output: {output}");
         eprintln!();
     }
 
-    let is_output_ok = output.is_ok();
-    let output = output.unwrap_or_else(|err| err.to_string());
-
-    match target {
-        Redirect::None => match is_output_ok {
-            true => print!("{output}"),
-            false => eprint!("{output}"),
-        },
-        Redirect::Stdout(target) | Redirect::Stderr(target) => redirect(&output, &target, false),
-        Redirect::AppendStdout(target) | Redirect::AppendStderr(target) => {
-            redirect(&output, &target, true)
+    match redirect {
+        Redirect::None => {
+            stdout
+                .write_all(&output.stdout)
+                .expect(FAILED_WRITE_TO_STDOUT);
+            stderr
+                .write_all(&output.stderr)
+                .expect(FAILED_WRITE_TO_STDERR);
+        }
+        Redirect::Stdout(target) => {
+            stderr
+                .write_all(&output.stderr)
+                .expect(FAILED_WRITE_TO_STDERR);
+            // eprint!("{}", output.clone().unwrap());
+            write_redirected(&output.stdout, &target, false);
+        }
+        Redirect::Stderr(target) => {
+            stdout
+                .write_all(&output.stdout)
+                .expect(FAILED_WRITE_TO_STDOUT);
+            // print!("{}", output.clone().unwrap());
+            write_redirected(&output.stderr, &target, false);
+        }
+        Redirect::AppendStdout(target) => {
+            stderr
+                .write_all(&output.stderr)
+                .expect(FAILED_WRITE_TO_STDERR);
+            // eprint!("{}", output.clone().unwrap());
+            write_redirected(&output.stdout, &target, true);
+        }
+        Redirect::AppendStderr(target) => {
+            stdout
+                .write_all(&output.stdout)
+                .expect(FAILED_WRITE_TO_STDOUT);
+            // print!("{}", output.clone().unwrap());
+            write_redirected(&output.stderr, &target, true);
         }
     }
+
+    io::stdout().flush().expect(FAILED_FLUSH);
+    io::stderr().flush().expect(FAILED_FLUSH);
 }
 
 /// Builds a table of command handlers and returns it
@@ -104,7 +139,7 @@ fn get_handlers<'a>() -> HashMap<&'a str, Handler> {
 /// # References
 /// - [Redirecting Output](https://www.gnu.org/software/bash/manual/bash.html#Redirecting-Output)
 /// - [Appending Redirected Output](https://www.gnu.org/software/bash/manual/bash.html#Appending-Redirected-Output)
-fn redirect(output: &str, target: &str, append: bool) {
+fn write_redirected(output: &[u8], target: &str, append: bool) {
     if !append {
         if let Err(err) = fs::write(target, output) {
             eprintln!("{err}: Failed to write to file '{target}'");
@@ -117,9 +152,12 @@ fn redirect(output: &str, target: &str, append: bool) {
                 return;
             }
         };
-        if let Err(err) = write!(file, "{}", output) {
-            eprintln!("{err}: Failed to write to file '{target}'");
+        if let Err(err) = file.write_all(output) {
+            eprintln!("{err}: Failed to append to file '{target}'");
         }
+        if let Err(err) = file.flush() {
+            eprintln!("{err}: Failed to flush the file '{target}'");
+        };
     }
 }
 

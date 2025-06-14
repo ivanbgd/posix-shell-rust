@@ -1,44 +1,78 @@
 //! Command handlers
 
 use crate::constants::{Args, COMMANDS};
-use crate::errors::OutputError;
 use std::env;
+use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Command;
 
+/// The output of a command
+///
+/// Contains `stdout` and `stderr`.
+#[derive(Debug)]
+pub struct Output {
+    /// The data that the command wrote to `stdout`
+    pub stdout: Vec<u8>,
+    /// The data that the command wrote to `stderr`
+    pub stderr: Vec<u8>,
+}
+
+impl Output {
+    fn new(stdout: &[u8], stderr: &[u8]) -> Self {
+        Self {
+            stdout: stdout.to_owned(),
+            stderr: stderr.to_owned(),
+        }
+    }
+}
+
+impl Display for Output {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Output {{ stdout: {:?}, stderr: {:?} }}",
+            String::from_utf8_lossy(&self.stdout),
+            String::from_utf8_lossy(&self.stderr)
+        )
+    }
+}
+
 /// Handler for the `cd` builtin
-pub fn handle_cd(arg: Args) -> Result<String, OutputError> {
+pub fn handle_cd(arg: Args) -> Output {
     if !arg.is_empty() {
         let arg = &arg[0];
         let home = match env::var("HOME") {
             Ok(val) => val,
             Err(_) => {
-                return Err("HOME not found\n".into());
+                return Output::new(b"", b"HOME not found\n");
             }
         };
         let arg = if arg.eq(&"~") { home.as_str() } else { arg };
 
         if env::set_current_dir(arg).is_err() {
-            return Err(format!("cd: {arg}: No such file or directory\n").into());
+            return Output::new(
+                b"",
+                format!("cd: {arg}: No such file or directory\n").as_bytes(),
+            );
         }
     };
 
-    Ok("".to_string())
+    Output::new(b"", b"")
 }
 
 /// Handler for the `echo` builtin
-pub fn handle_echo(args: Args) -> Result<String, OutputError> {
-    Ok(format!("{}\n", args.join(" ")))
+pub fn handle_echo(args: Args) -> Output {
+    Output::new(format!("{}\n", args.join(" ")).as_ref(), b"")
 }
 
 /// Handler for the `exit` builtin
-pub fn handle_exit(arg: Args) -> Result<String, OutputError> {
+pub fn handle_exit(arg: Args) -> Output {
     match arg.is_empty() {
         false => {
             let arg = &arg[0];
             match arg.trim().parse::<i32>() {
                 Ok(exit_code) => std::process::exit(exit_code),
-                Err(_) => Err(format!("Invalid exit code: {arg}\n").into()),
+                Err(_) => Output::new(b"", format!("Invalid exit code: {arg}\n").as_bytes()),
             }
         }
         true => std::process::exit(0),
@@ -46,10 +80,10 @@ pub fn handle_exit(arg: Args) -> Result<String, OutputError> {
 }
 
 /// Handler for the `pwd` builtin
-pub fn handle_pwd(_arg: Args) -> Result<String, OutputError> {
+pub fn handle_pwd(_arg: Args) -> Output {
     match env::current_dir() {
-        Ok(pwd) => Ok(format!("{}\n", pwd.display())),
-        Err(err) => Err(format!("{}\n", err).into()),
+        Ok(pwd) => Output::new(format!("{}\n", pwd.display()).as_bytes(), b""),
+        Err(err) => Output::new(b"", format!("{}\n", err).as_bytes()),
     }
 }
 
@@ -59,7 +93,7 @@ pub fn handle_pwd(_arg: Args) -> Result<String, OutputError> {
 ///
 /// Some commands, such as `echo`, can exist as both builtin commands and executable files.
 /// In such cases, the type command identifies them as builtins.
-pub fn handle_type(arg: Args) -> Result<String, OutputError> {
+pub fn handle_type(arg: Args) -> Output {
     let mut result = "\n".to_string();
 
     if !arg.is_empty() {
@@ -72,21 +106,21 @@ pub fn handle_type(arg: Args) -> Result<String, OutputError> {
             for path in paths {
                 if path.join(arg).exists() {
                     result = format!("{arg} is {}\n", path.join(arg).display());
-                    return Ok(result);
+                    return Output::new(result.as_bytes(), b"");
                 }
             }
 
-            return Err(format!("{arg}: not found\n").into());
+            return Output::new(b"", format!("{arg}: not found\n").as_bytes());
         }
     };
 
-    Ok(result)
+    Output::new(result.as_bytes(), b"")
 }
 
 /// Runs external programs with arguments
 ///
 /// External programs are located using the `PATH` environment variable.
-pub fn run_program(exec: &str, args: Args) -> Result<String, OutputError> {
+pub fn run_program(exec: &str, args: Args) -> Output {
     let paths = get_paths();
 
     for path in paths {
@@ -94,24 +128,22 @@ pub fn run_program(exec: &str, args: Args) -> Result<String, OutputError> {
             let output = match Command::new(exec).args(args).output() {
                 Ok(output) => output,
                 Err(err) => {
-                    return Err(format!(
-                        "{err}: failed to execute command `{} {}'\n",
-                        exec,
-                        args.join(" ")
-                    )
-                    .into());
+                    return Output::new(
+                        b"",
+                        format!(
+                            "{err}: failed to execute command `{} {}'\n",
+                            exec,
+                            args.join(" ")
+                        )
+                        .as_ref(),
+                    );
                 }
             };
-            if !output.stderr.is_empty() {
-                eprint!("{}", String::from_utf8(output.stderr).unwrap());
-            }
-            if !output.stdout.is_empty() {
-                return Ok(String::from_utf8(output.stdout).unwrap().to_string());
-            }
+            return Output::new(&output.stdout, &output.stderr);
         }
     }
 
-    Err(format!("{exec}: command not found\n").into())
+    Output::new(b"", format!("{exec}: command not found\n").as_ref())
 }
 
 /// A helper function which extracts directories from
