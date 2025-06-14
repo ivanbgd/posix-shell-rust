@@ -19,6 +19,8 @@ use crate::constants::DEBUG;
 use crate::errors::InvalidInputError;
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
+use std::iter::Peekable;
+use std::str::Chars;
 
 /// Finite state machine that changes state depending on quoting and escaping
 #[derive(Debug)]
@@ -50,7 +52,7 @@ impl Display for Fsm {
 
 /// Type of redirection containing the target, if any
 ///
-/// This is effectively treated as a mini FSM inside the main FSM.
+/// This is effectively treated as a mini FSM embedded inside the main FSM.
 #[derive(Debug, PartialEq)]
 pub enum Redirect {
     None,
@@ -58,6 +60,8 @@ pub enum Redirect {
     Stderr(String),
     AppendStdout(String),
     AppendStderr(String),
+    CombinedStdout(String),
+    AppendCombinedStdout(String),
 }
 
 impl Redirect {
@@ -69,6 +73,8 @@ impl Redirect {
             Redirect::Stderr(_) => Redirect::Stderr(target),
             Redirect::AppendStdout(_) => Redirect::AppendStdout(target),
             Redirect::AppendStderr(_) => Redirect::AppendStderr(target),
+            Redirect::CombinedStdout(_) => Redirect::CombinedStdout(target),
+            Redirect::AppendCombinedStdout(_) => Redirect::AppendCombinedStdout(target),
         }
     }
 }
@@ -124,61 +130,8 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
                     item.push(ch);
                     state = Fsm::UnquotedEscape;
                 }
-                '>' => match redirect {
-                    Redirect::None => {
-                        if item.eq("1") {
-                            item.clear();
-                            redirect = Redirect::Stdout(target.clone());
-                        } else if item.eq("2") {
-                            item.clear();
-                            redirect = Redirect::Stderr(target.clone());
-                        } else {
-                            if !item.is_empty() {
-                                items.push(item.to_string());
-                                item.clear();
-                            }
-                            redirect = Redirect::Stdout(target.clone());
-                        }
-                    }
-                    Redirect::Stdout(trg) => redirect = Redirect::AppendStdout(trg),
-                    Redirect::Stderr(trg) => redirect = Redirect::AppendStderr(trg),
-                    Redirect::AppendStdout(_) | Redirect::AppendStderr(_) => {
-                        return Err("shell: syntax error near unexpected token `>'".into());
-                    }
-                },
-                '&' => {
-                    let next = input.peek().unwrap_or(&' ');
-                    match redirect {
-                        Redirect::None => {
-                            // & is used for background operation, and && as logical AND.
-                            unimplemented!("not implemented: &");
-                        }
-                        Redirect::Stdout(ref trg) => {
-                            if next.eq(&'2') {
-                                redirect = Redirect::Stderr(trg.to_owned());
-                                input.next();
-                            }
-                        }
-                        Redirect::Stderr(ref trg) => {
-                            if next.eq(&'1') {
-                                redirect = Redirect::Stdout(trg.to_owned());
-                                input.next();
-                            }
-                        }
-                        Redirect::AppendStdout(ref trg) => {
-                            if next.eq(&'2') {
-                                redirect = Redirect::AppendStderr(trg.to_owned());
-                                input.next();
-                            }
-                        }
-                        Redirect::AppendStderr(ref trg) => {
-                            if next.eq(&'1') {
-                                redirect = Redirect::AppendStdout(trg.to_owned());
-                                input.next();
-                            }
-                        }
-                    }
-                }
+                '>' => handle_closing_angle_bracket_unquoted(&mut items, &mut item, &mut redirect)?,
+                '&' => handle_ampersand_unquoted(&mut input, &mut item, &mut redirect)?,
                 _ => {
                     item.push(ch);
                 }
@@ -254,6 +207,109 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
             reason: other.to_string(),
         }),
     }
+}
+
+/// Handle the received `>` character in the [`Fsm::Unquoted`] state
+fn handle_closing_angle_bracket_unquoted(
+    items: &mut Vec<String>,
+    item: &mut String,
+    redirect: &mut Redirect,
+) -> Result<(), InvalidInputError> {
+    match redirect {
+        Redirect::None => {
+            if (*item).eq("1") {
+                // `1>`
+                item.clear();
+                *redirect = Redirect::Stdout(String::new());
+            } else if (*item).eq("2") {
+                // `2>`
+                item.clear();
+                *redirect = Redirect::Stderr(String::new());
+            } else {
+                // `>`
+                if !item.is_empty() {
+                    items.push(item.to_string());
+                    item.clear();
+                }
+                *redirect = Redirect::Stdout(String::new());
+            }
+        }
+        Redirect::Stdout(trg) => *redirect = Redirect::AppendStdout(trg.to_owned()),
+        Redirect::Stderr(trg) => *redirect = Redirect::AppendStderr(trg.to_owned()),
+        Redirect::CombinedStdout(trg) => *redirect = Redirect::AppendCombinedStdout(trg.to_owned()),
+        Redirect::AppendStdout(_)
+        | Redirect::AppendStderr(_)
+        | Redirect::AppendCombinedStdout(_) => {
+            return Err("shell: syntax error near unexpected token `>'\n".into());
+        }
+    }
+
+    Ok(())
+}
+
+/// Handle the received `&` character in the [`Fsm::Unquoted`] state
+///
+/// # References
+/// - [Redirecting Output](https://www.gnu.org/software/bash/manual/bash.html#Redirecting-Output)
+fn handle_ampersand_unquoted(
+    input: &mut Peekable<Chars>,
+    item: &mut str,
+    redirect: &mut Redirect,
+) -> Result<(), InvalidInputError> {
+    let next = input.peek().unwrap_or(&' ');
+
+    match redirect {
+        Redirect::None => {
+            // Unimplemented: `&` on its own is used for background operation, and `&&` as logical AND.
+            if next.eq(&'>') {
+                // shell-specific `&>word` or `&> word`
+                *redirect = Redirect::CombinedStdout(String::new());
+                input.next();
+            } else if item.is_empty() && next.is_whitespace() {
+                // Unimplemented: Background operation
+                return Err("shell: unimplemented `&'\n".into());
+            } else if next.eq(&'&') {
+                // Unimplemented: The logical AND operator
+                return Err("shell: unimplemented `&&'\n".into());
+            }
+        }
+        Redirect::Stdout(trg) => {
+            if next.eq(&'2') {
+                // `1>&2` or `>&2`
+                *redirect = Redirect::Stderr(trg.to_owned());
+                input.next();
+            } else {
+                // shell-specific `>&word` or `>& word`
+                *redirect = Redirect::CombinedStdout(trg.to_owned());
+            }
+        }
+        Redirect::Stderr(trg) => {
+            if next.eq(&'1') {
+                // `2>&1`
+                *redirect = Redirect::Stdout(trg.to_owned());
+                input.next();
+            }
+        }
+        Redirect::AppendStdout(trg) => {
+            if next.eq(&'2') {
+                // `1>>&2` or `>>&2`
+                *redirect = Redirect::AppendStderr(trg.to_owned());
+                input.next();
+            }
+        }
+        Redirect::AppendStderr(trg) => {
+            if next.eq(&'1') {
+                // `2>>&1`
+                *redirect = Redirect::AppendStdout(trg.to_owned());
+                input.next();
+            }
+        }
+        Redirect::CombinedStdout(_) | Redirect::AppendCombinedStdout(_) => {
+            return Err("shell: syntax error near unexpected token `&'\n".into());
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

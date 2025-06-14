@@ -9,7 +9,7 @@
 //! - [REPL @ Wikipedia](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)
 //! - [Bash Reference Manual](https://www.gnu.org/software/bash/manual/html_node/)
 
-use crate::cmd::run_program;
+use crate::cmd::{run_program, Output};
 use crate::constants::{
     Handler, COMMANDS, DEBUG, FAILED_FLUSH, FAILED_READ_LINE,
     FAILED_WRITE_TO_STDERR, FAILED_WRITE_TO_STDOUT, HANDLERS, PROMPT,
@@ -81,6 +81,14 @@ fn parse_input_and_handle_cmd(stdout: &mut Stdout, stderr: &mut Stderr, input: &
         eprintln!();
     }
 
+    handle_redirect(stdout, stderr, redirect, output);
+
+    stdout.flush().expect(FAILED_FLUSH);
+    stderr.flush().expect(FAILED_FLUSH);
+}
+
+/// Handle redirection
+fn handle_redirect(stdout: &mut Stdout, stderr: &mut Stderr, redirect: Redirect, output: Output) {
     match redirect {
         Redirect::None => {
             stdout
@@ -114,20 +122,15 @@ fn parse_input_and_handle_cmd(stdout: &mut Stdout, stderr: &mut Stderr, input: &
                 .expect(FAILED_WRITE_TO_STDOUT);
             write_redirected(&output.stderr, &target, true);
         }
+        Redirect::CombinedStdout(target) => {
+            write_redirected(&output.stdout, &target, false);
+            write_redirected(&output.stderr, &target, true);
+        }
+        Redirect::AppendCombinedStdout(target) => {
+            write_redirected(&output.stdout, &target, true);
+            write_redirected(&output.stderr, &target, true);
+        }
     }
-
-    io::stdout().flush().expect(FAILED_FLUSH);
-    io::stderr().flush().expect(FAILED_FLUSH);
-}
-
-/// Builds a table of command handlers and returns it
-fn get_handlers<'a>() -> HashMap<&'a str, Handler> {
-    let pairs: [(&str, Handler); COMMANDS.len()] = zip(COMMANDS, HANDLERS)
-        .collect::<Vec<_>>()
-        .try_into()
-        .expect("Failed to convert vector to array");
-
-    HashMap::from(pairs)
 }
 
 /// Helper for writing redirected output to the given target file
@@ -155,6 +158,16 @@ fn write_redirected(output: &[u8], target: &str, append: bool) {
             eprintln!("{err}: Failed to flush the file '{target}'");
         };
     }
+}
+
+/// Builds a table of command handlers and returns it
+fn get_handlers<'a>() -> HashMap<&'a str, Handler> {
+    let pairs: [(&str, Handler); COMMANDS.len()] = zip(COMMANDS, HANDLERS)
+        .collect::<Vec<_>>()
+        .try_into()
+        .expect("Failed to convert vector to array");
+
+    HashMap::from(pairs)
 }
 
 /// Copies the value of the environment variable `DEBUG`, if it exists, to the global variable `DEBUG`,

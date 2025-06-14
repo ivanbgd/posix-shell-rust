@@ -24,6 +24,7 @@
 - Supports [redirecting output](https://www.gnu.org/software/bash/manual/bash.html#Redirecting-Output).
 - Supports
   [appending redirected output](https://www.gnu.org/software/bash/manual/bash.html#Appending-Redirected-Output).
+- Supports shell-specific `&>word` and shell-specific `>&word`.
 
 # Running the Program
 
