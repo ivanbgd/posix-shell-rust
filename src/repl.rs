@@ -94,28 +94,24 @@ fn parse_input_and_handle_cmd(stdout: &mut Stdout, stderr: &mut Stderr, input: &
             stderr
                 .write_all(&output.stderr)
                 .expect(FAILED_WRITE_TO_STDERR);
-            // eprint!("{}", output.clone().unwrap());
             write_redirected(&output.stdout, &target, false);
         }
         Redirect::Stderr(target) => {
             stdout
                 .write_all(&output.stdout)
                 .expect(FAILED_WRITE_TO_STDOUT);
-            // print!("{}", output.clone().unwrap());
             write_redirected(&output.stderr, &target, false);
         }
         Redirect::AppendStdout(target) => {
             stderr
                 .write_all(&output.stderr)
                 .expect(FAILED_WRITE_TO_STDERR);
-            // eprint!("{}", output.clone().unwrap());
             write_redirected(&output.stdout, &target, true);
         }
         Redirect::AppendStderr(target) => {
             stdout
                 .write_all(&output.stdout)
                 .expect(FAILED_WRITE_TO_STDOUT);
-            // print!("{}", output.clone().unwrap());
             write_redirected(&output.stderr, &target, true);
         }
     }
@@ -145,7 +141,7 @@ fn write_redirected(output: &[u8], target: &str, append: bool) {
             eprintln!("{err}: Failed to write to file '{target}'");
         }
     } else {
-        let mut file = match OpenOptions::new().append(true).open(target) {
+        let mut file = match OpenOptions::new().append(true).create(true).open(target) {
             Ok(file) => file,
             Err(err) => {
                 eprintln!("{err}: Failed to open the file '{target}'");

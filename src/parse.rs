@@ -127,12 +127,16 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
                 '>' => match redirect {
                     Redirect::None => {
                         if item.eq("1") {
-                            item = String::new();
+                            item.clear();
                             redirect = Redirect::Stdout(target.clone());
                         } else if item.eq("2") {
-                            item = String::new();
+                            item.clear();
                             redirect = Redirect::Stderr(target.clone());
                         } else {
+                            if !item.is_empty() {
+                                items.push(item.to_string());
+                                item.clear();
+                            }
                             redirect = Redirect::Stdout(target.clone());
                         }
                     }
