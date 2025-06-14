@@ -40,9 +40,9 @@ enum Fsm {
 impl Display for Fsm {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let reason = match self {
-            Fsm::Single => "unmatched single quotes",
-            Fsm::Double => "unmatched double quotes",
-            Fsm::UnquotedEscape | Fsm::DoubleEscape => "unmatched escape character",
+            Fsm::Single => "unmatched single quotes\n",
+            Fsm::Double => "unmatched double quotes\n",
+            Fsm::UnquotedEscape | Fsm::DoubleEscape => "unmatched escape character\n",
             state => panic!("finishing in the '{state:?}' state is not an error"),
         };
 
@@ -61,7 +61,9 @@ pub enum Redirect {
     AppendStdout(String),
     AppendStderr(String),
     CombinedStdout(String),
+    CombinedStderr(String),
     AppendCombinedStdout(String),
+    AppendCombinedStderr(String),
 }
 
 impl Redirect {
@@ -74,7 +76,9 @@ impl Redirect {
             Redirect::AppendStdout(_) => Redirect::AppendStdout(target),
             Redirect::AppendStderr(_) => Redirect::AppendStderr(target),
             Redirect::CombinedStdout(_) => Redirect::CombinedStdout(target),
+            Redirect::CombinedStderr(_) => Redirect::CombinedStderr(target),
             Redirect::AppendCombinedStdout(_) => Redirect::AppendCombinedStdout(target),
+            Redirect::AppendCombinedStderr(_) => Redirect::AppendCombinedStderr(target),
         }
     }
 }
@@ -242,6 +246,7 @@ fn handle_closing_angle_bracket_unquoted(
         | Redirect::AppendCombinedStdout(_) => {
             return Err("shell: syntax error near unexpected token `>'\n".into());
         }
+        _ => todo!(),
     }
 
     Ok(())
@@ -307,6 +312,7 @@ fn handle_ampersand_unquoted(
         Redirect::CombinedStdout(_) | Redirect::AppendCombinedStdout(_) => {
             return Err("shell: syntax error near unexpected token `&'\n".into());
         }
+        _ => todo!(),
     }
 
     Ok(())
@@ -626,7 +632,7 @@ mod tests {
     #[test]
     fn invalid_input() {
         let mut expected = InvalidInputError {
-            reason: "unmatched escape character".to_string(),
+            reason: "unmatched escape character\n".to_string(),
         };
 
         let mut input = r#"echo \"#;
@@ -634,7 +640,7 @@ mod tests {
         assert_eq!(expected, result);
 
         expected = InvalidInputError {
-            reason: "unmatched single quotes".to_string(),
+            reason: "unmatched single quotes\n".to_string(),
         };
 
         input = r#"echo '"#;
@@ -650,7 +656,7 @@ mod tests {
         assert_eq!(expected, result);
 
         expected = InvalidInputError {
-            reason: "unmatched double quotes".to_string(),
+            reason: "unmatched double quotes\n".to_string(),
         };
 
         input = r#"echo ""#;

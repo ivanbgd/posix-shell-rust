@@ -17,7 +17,7 @@ use crate::constants::{
 use crate::parse::{parse_input, Redirect};
 use std::collections::HashMap;
 use std::fs;
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::{self, Stderr, Stdout, Write};
 use std::iter::zip;
 
@@ -129,6 +129,19 @@ fn handle_redirect(stdout: &mut Stdout, stderr: &mut Stderr, redirect: Redirect,
         Redirect::AppendCombinedStdout(target) => {
             write_redirected(&output.stdout, &target, true);
             write_redirected(&output.stderr, &target, true);
+        }
+        Redirect::CombinedStderr(target) | Redirect::AppendCombinedStderr(target) => {
+            stdout
+                .write_all(&output.stdout)
+                .expect(FAILED_WRITE_TO_STDOUT);
+            stderr
+                .write_all(&output.stderr)
+                .expect(FAILED_WRITE_TO_STDERR);
+            if !target.is_empty() {
+                if let Err(err) = File::create(&target) {
+                    eprintln!("{err}: Failed to create the file '{target}'");
+                }
+            }
         }
     }
 }
