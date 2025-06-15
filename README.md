@@ -32,14 +32,14 @@
 $ ./run.sh
 ```
 
-# Running the Program with Debug Output
+# Building and Running the Program with Debug Output
 
-The program supports the debugging output, which can be enabled by setting
+The program supports debugging output, which can be enabled by setting
 the environment variable `DEBUG` to the value `true`.
 
 It can be set outside the program, in the user shell, or inside the `run.sh` shell script.
 
-This is only considered during compile time, and **not** during run time.
+This is only considered during **compile time**, and **not** during run time.
 
 ```shell
 $ DEBUG=true ./run.sh
