@@ -90,7 +90,7 @@ impl Redirect {
 /// - https://doc.rust-lang.org/std/primitive.char.html#method.is_ascii_whitespace
 /// - [Quoting](https://www.gnu.org/software/bash/manual/bash.html#Quoting)
 /// - [Redirecting Output](https://www.gnu.org/software/bash/manual/bash.html#Redirecting-Output)
-pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputError> {
+pub fn parse_input(input: &str) -> Result<(Vec<String>, Vec<Redirect>), InvalidInputError> {
     // An item can be more than a single word if it was quoted in the input.
     // Conversely, two or more words from the input can be merged into a single word (item)
     // if they were separated only by a matching pair of quotes in the input.
@@ -105,8 +105,8 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
     let mut items: Vec<String> = Vec::new();
     let mut item = String::new();
 
-    // Redirection target
-    let mut target: String = String::new();
+    // Redirection targets
+    let mut redirects: Vec<Redirect> = Vec::new();
     let mut redirect = Redirect::None;
 
     let mut state = Fsm::Unquoted;
@@ -119,7 +119,8 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
                         if redirect.eq(&Redirect::None) {
                             items.push(item.to_string());
                         } else {
-                            target.push_str(item.as_str());
+                            redirects.push(redirect.from(item.clone()));
+                            redirect = Redirect::None;
                         }
                         item.clear();
                     }
@@ -200,13 +201,15 @@ pub fn parse_input(input: &str) -> Result<(Vec<String>, Redirect), InvalidInputE
     if redirect.eq(&Redirect::None) {
         items.push(item.to_string());
     } else {
-        target.push_str(item.as_str());
+        redirects.push(redirect.from(item.clone()));
     }
 
-    let redirect = redirect.from(target);
+    if redirects.is_empty() {
+        redirects.push(Redirect::None);
+    }
 
     match state {
-        Fsm::Unquoted => Ok((items, redirect)),
+        Fsm::Unquoted => Ok((items, redirects)),
         other => Err(InvalidInputError {
             reason: other.to_string(),
         }),

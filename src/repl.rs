@@ -52,7 +52,7 @@ pub fn repl() {
 fn parse_input_and_handle_cmd(stdout: &mut Stdout, stderr: &mut Stderr, input: &str) {
     let handlers = get_handlers();
 
-    let (items, redirect) = match parse_input(input) {
+    let (items, redirects) = match parse_input(input) {
         Ok(items) => items,
         Err(error) => {
             write!(stderr, "{error}").expect(FAILED_WRITE_TO_STDERR);
@@ -76,19 +76,26 @@ fn parse_input_and_handle_cmd(stdout: &mut Stdout, stderr: &mut Stderr, input: &
     if DEBUG.get().is_some_and(|&debug| debug) {
         eprintln!("cmd: {cmd:?}");
         eprintln!("args: {args:?}");
-        eprintln!("redirect: {redirect:?}");
+        eprintln!("redirect: {redirects:?}");
         eprintln!("output: {output}");
         eprintln!();
     }
 
-    handle_redirect(stdout, stderr, redirect, output);
+    for redirect in redirects {
+        handle_redirection(stdout, stderr, redirect, &output);
+    }
 
     stdout.flush().expect(FAILED_FLUSH);
     stderr.flush().expect(FAILED_FLUSH);
 }
 
 /// Handle redirection
-fn handle_redirect(stdout: &mut Stdout, stderr: &mut Stderr, redirect: Redirect, output: Output) {
+fn handle_redirection(
+    stdout: &mut Stdout,
+    stderr: &mut Stderr,
+    redirect: Redirect,
+    output: &Output,
+) {
     match redirect {
         Redirect::None => {
             stdout
