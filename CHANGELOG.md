@@ -32,4 +32,4 @@ This is the initial fully-functioning version of the library and the application
     - `deny.toml`
 - GitHub action `ci.yml`
 - GitHub action `release.yml`
-- Pre-commit hook, `.pre-commit-config.yaml`
+- Pre-commit hooks, `.pre-commit-config.yaml`
