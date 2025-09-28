@@ -1476,7 +1476,6 @@ mod tests {
     }
 
     // TODO: See repl::handle_redirections(), where this is used. I don't think that's the issue.
-    #[ignore = "temporarily ignore to tests ci"] // TODO: remove
     #[test]
     fn redirection_02a() {
         let mut input = r#"echo test 1>&2"#;
