@@ -33,6 +33,20 @@
   whose name is the expansion of `word`.
 - Supports multiple redirections.
 
+# Development
+
+## pre-commit
+
+[pre-commit](https://pre-commit.com/) hooks are supported.
+
+```shell
+$ pip install pre-commit
+$ pre-commit install
+$ pre-commit run --all-files  # For manual running
+```
+
+After installing it, the provided [pre-commit hook](.pre-commit-config.yaml) will run automatically on `git commit`.
+
 # Running the Program
 
 ```shell
