@@ -27,5 +27,9 @@ This is the initial fully-functioning version of the library and the application
 - `README.md`
 - `LICENSE` ("MIT")
 - `CHANGELOG.md`
+- GitHub action `audit.yml`, with:
+    - `audit.toml`
+    - `deny.toml`
 - GitHub action `ci.yml`
 - GitHub action `release.yml`
+- Pre-commit hook, `.pre-commit-config.yaml`

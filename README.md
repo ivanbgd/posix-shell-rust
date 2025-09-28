@@ -33,16 +33,24 @@
   whose name is the expansion of `word`.
 - Supports multiple redirections.
 
+# Security
+
+- [cargo audit](https://github.com/rustsec/rustsec/blob/main/cargo-audit/README.md) is supported,
+  as well as its GitHub action, [audit-check](https://github.com/rustsec/audit-check).
+- [cargo deny](https://embarkstudios.github.io/cargo-deny/) is supported,
+  as well as its GitHub action, [cargo-deny-action](https://github.com/EmbarkStudios/cargo-deny-action).
+
 # Development
 
-## pre-commit
+## Pre-commit
 
 [pre-commit](https://pre-commit.com/) hooks are supported.
 
 ```shell
 $ pip install pre-commit
 $ pre-commit install
-$ pre-commit run --all-files  # For manual running
+$ pre-commit run  # For manual running; considers only modified files
+$ pre-commit run --all-files  # For manual running; considers all files
 ```
 
 After installing it, the provided [pre-commit hook](.pre-commit-config.yaml) will run automatically on `git commit`.
