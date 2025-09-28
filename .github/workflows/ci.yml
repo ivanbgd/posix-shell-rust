@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
     types: [ opened, reopened, synchronize ]
     branches:
@@ -18,14 +20,53 @@ permissions:
 # Each job runs in a runner environment specified by `runs-on`.
 jobs:
 
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          toolchain: 1.89.0 # MSRV check
+      #      - uses: ilammy/setup-nasm@v1
+      - uses: Swatinem/rust-cache@v2
+      - name: Linting
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Enforce formatting
+        run: cargo fmt -- --check --color always
+
+  publish-check:
+    name: Publish check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.89.0 # MSRV check
+      #      - uses: ilammy/setup-nasm@v1
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fetch
+      - name: cargo publish
+        run: cargo publish --dry-run
+
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: ilammy/setup-nasm@v1
+      #      - uses: ilammy/setup-nasm@v1
 
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # This GitHub Action installs a Rust toolchain using "rustup".
       # It is designed for one-line concise usage and good defaults.
@@ -39,26 +80,9 @@ jobs:
       - name: Run tests
         run: cargo test
 
-  fmt:
-    name: Format
+  ci_success:
+    name: CI success
     runs-on: ubuntu-latest
+    needs: [ clippy, fmt, publish-check, test ]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - name: Enforce formatting
-        run: cargo fmt --check
-
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/setup-nasm@v1
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-      - name: Linting
-        run: cargo clippy --all-targets -- -D warnings
+      - run: echo "All CI jobs successfully finished."

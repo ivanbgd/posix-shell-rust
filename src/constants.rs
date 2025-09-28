@@ -8,6 +8,9 @@ use std::sync::OnceLock;
 /// Allows debug printouts
 pub static DEBUG: OnceLock<bool> = OnceLock::new();
 
+/// Used for end-to-end testing from within a shell script
+pub static TEST: OnceLock<bool> = OnceLock::new();
+
 /// Number of supported shell commands
 const NUM_CMDS: usize = 5;
 
@@ -30,8 +33,10 @@ pub const FAILED_READ_LINE: &str = "Read line failed";
 pub const FAILED_WRITE_TO_STDOUT: &str = "Write to stdout failed";
 /// Expect message for a failed write to `stderr`
 pub const FAILED_WRITE_TO_STDERR: &str = "Write to stderr failed";
-/// Expect message for a failed flush
-pub const FAILED_FLUSH: &str = "Flush failed";
+/// Expect message for a failed flush to stdout
+pub const FAILED_FLUSH_TO_STDOUT: &str = "Flush to stdout failed";
+/// Expect message for a failed flush to stderr
+pub const FAILED_FLUSH_TO_STDERR: &str = "Flush to stderr failed";
 
 /// Command-handlers' arguments type
 pub type Args<'a> = &'a [&'a str];

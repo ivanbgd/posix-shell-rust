@@ -1,16 +1,15 @@
 [package]
 name = "posix-shell"
+description = "A POSIX-Compliant Shell (CLI) Implementation in Rust"
 version = "0.1.0"
 authors = ["Ivan Lazarević"]
-description = "A POSIX-Compliant Shell (CLI) Implementation in Rust"
 repository = "https://github.com/ivanbgd/posix-shell-rust"
-keywords = ["cli"]
-categories = ["command-line-interface"]
 license = "MIT"
+readme = "README.md"
+categories = ["command-line-interface"]
+keywords = ["cli"]
 edition = "2024"
-
-[profile.release]
-strip = "symbols"
+rust-version = "1.89.0"
 
 [lib]
 path = "src/lib.rs"
@@ -20,3 +19,8 @@ name = "posix-shell"
 path = "src/main.rs"
 
 [dependencies]
+
+[profile.release]
+strip = "symbols"
+#lto = "fat"
+#codegen-units = 1

@@ -18,6 +18,9 @@ use std::fmt::{Display, Formatter};
 /// - `echo "`
 /// - `echo """`
 /// - `echo '\''`
+/// - `echo test >>> file`
+/// - `echo test &>& file`
+/// - `echo test >&& file`
 #[derive(Debug, PartialEq)]
 pub struct InvalidInputError {
     pub reason: String,

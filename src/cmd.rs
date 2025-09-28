@@ -8,21 +8,27 @@ use std::process::Command;
 
 /// The output of a command
 ///
-/// Contains `stdout` and `stderr`.
+/// Contains fields `stdout` and `stderr` that hold the respective output data.
 #[derive(Debug)]
 pub struct Output {
     /// The data that the command wrote to `stdout`
-    pub stdout: Vec<u8>,
+    stdout: Vec<u8>,
     /// The data that the command wrote to `stderr`
-    pub stderr: Vec<u8>,
+    stderr: Vec<u8>,
 }
 
 impl Output {
+    /// Constructs a new instance, filling the `stdout` and `stderr` fields.
     fn new(stdout: &[u8], stderr: &[u8]) -> Self {
         Self {
             stdout: stdout.to_owned(),
             stderr: stderr.to_owned(),
         }
+    }
+
+    /// Gets the `stdout` and `stderr` data fields for reading.
+    pub fn get(self) -> (Vec<u8>, Vec<u8>) {
+        (self.stdout, self.stderr)
     }
 }
 
@@ -121,6 +127,7 @@ pub fn handle_type(arg: Args) -> Output {
 ///
 /// External programs are located using the `PATH` environment variable.
 pub fn run_program(exec: &str, args: Args) -> Output {
+    // eprintln!("******* run_program() !!!!!!!"); // TODO remove
     let paths = get_paths();
 
     for path in paths {
