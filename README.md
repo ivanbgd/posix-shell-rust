@@ -5,6 +5,7 @@
 [![docs.rs](https://docs.rs/posix-shell/badge.svg)](https://docs.rs/posix-shell/)
 [![CI](https://github.com/ivanbgd/posix-shell-rust/actions/workflows/ci.yml/badge.svg)](https://github.com/ivanbgd/posix-shell-rust/actions/workflows/ci.yml)
 [![Security audit](https://github.com/ivanbgd/posix-shell-rust/actions/workflows/audit.yml/badge.svg)](https://github.com/ivanbgd/posix-shell-rust/actions/workflows/audit.yml)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
 # Supported Builtin Commands
 
@@ -48,6 +49,7 @@
 
 ```shell
 $ pip install pre-commit  # If you don't already have pre-commit installed on your machine. Run once.
+$ pre-commit autoupdate  # Update hook repositories to the latest versions.
 $ pre-commit install  # Sets up the pre-commit git hook script for the repository. Run once.
 $ pre-commit install --hook-type pre-push  # Sets up the pre-push git hook script for the repository. Run once.
 $ pre-commit run  # For manual running; considers only modified files.
